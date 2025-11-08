@@ -1,0 +1,234 @@
+.stacked-matcha-cards {
+  position: relative;
+  width: clamp(220px, 32vw, 300px);
+  height: clamp(260px, 40vw, 340px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1400px;
+  transform-style: preserve-3d;
+}
+
+.stack-card {
+  position: absolute;
+  inset: 0;
+  border-radius: 32px;
+  overflow: hidden;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  display: flex;
+  align-items: flex-end;
+  padding: 28px;
+  backdrop-filter: blur(6px);
+  transform-style: preserve-3d;
+}
+
+.stack-card__blur {
+  position: absolute;
+  inset: 0;
+  filter: blur(38px);
+  opacity: 0.8;
+  transform: translateZ(-2px);
+}
+
+.stack-card__content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: rgba(18, 28, 35, 0.88);
+  mix-blend-mode: multiply;
+  z-index: 1;
+}
+
+.stack-card__tag {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(12, 18, 16, 0.08);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.64rem;
+}
+
+.stack-card h3 {
+  font-size: 1.26rem;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.stack-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(18, 28, 35, 0.62);
+}
+
+.stack-card__accent {
+  width: 48px;
+  height: 6px;
+  border-radius: 8px;
+}
+
+.app-shell.dark .stack-card {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(242, 247, 243, 0.92);
+}
+
+.app-shell.dark .stack-card__tag {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(242, 247, 243, 0.88);
+}
+
+.app-shell.dark .stack-card p {
+  color: rgba(242, 247, 243, 0.68);
+}
+
+.stacked-reward-card {
+  position: relative;
+  width: clamp(240px, 34vw, 320px);
+  height: clamp(240px, 32vw, 320px);
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+.stacked-reward-card.claimed {
+  pointer-events: none;
+}
+
+.reward-stack-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: 26px;
+  backdrop-filter: blur(8px);
+  transform-style: preserve-3d;
+}
+
+.reward-layer-frost {
+  position: absolute;
+  inset: -20%;
+  filter: blur(48px);
+  opacity: 0.5;
+  z-index: 0;
+}
+
+.reward-layer-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: rgba(14, 26, 20, 0.88);
+}
+
+.reward-badge {
+  align-self: flex-start;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(14, 26, 20, 0.08);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.64rem;
+}
+
+.reward-layer-content h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.reward-layer-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: rgba(14, 26, 20, 0.64);
+}
+
+.reward-points-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.reward-points-highlight {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.reward-cta {
+  border: none;
+  background: rgba(12, 18, 16, 0.85);
+  color: #f5f7f4;
+  padding: 10px 18px;
+  border-radius: 999px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reward-cta[disabled] {
+  background: rgba(18, 26, 24, 0.2);
+  color: rgba(18, 26, 24, 0.6);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.reward-cta:hover:not([disabled]) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(12, 18, 16, 0.18);
+}
+
+.reward-cta:hover[disabled] {
+  transform: none;
+}
+
+.reward-cta:focus-visible {
+  outline: 2px solid rgba(12, 18, 16, 0.54);
+  outline-offset: 2px;
+}
+
+.reward-accent {
+  display: block;
+  width: 52px;
+  height: 5px;
+  border-radius: 6px;
+}
+
+.app-shell.dark .reward-stack-layer {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(240, 244, 242, 0.92);
+}
+
+.app-shell.dark .reward-layer-content p {
+  color: rgba(240, 244, 242, 0.76);
+}
+
+.app-shell.dark .reward-badge {
+  background: rgba(240, 244, 242, 0.12);
+  color: rgba(240, 244, 242, 0.86);
+}
+
+.app-shell.dark .reward-cta {
+  background: rgba(245, 247, 245, 0.92);
+  color: #111;
+}
+
+.app-shell.dark .stacked-reward-card.claimed {
+  pointer-events: none;
+}
+
+.app-shell.dark .reward-cta[disabled] {
+  background: rgba(245, 247, 245, 0.24);
+  color: rgba(245, 247, 245, 0.6);
+}
+
+.app-shell.dark .reward-cta:not([disabled]):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(245, 247, 245, 0.24);
+}
+

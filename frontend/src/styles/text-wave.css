@@ -1,0 +1,37 @@
+.text-wave {
+  font-size: clamp(2.8rem, 6vw, 4rem);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0;
+  color: var(--text-primary);
+  max-width: 100%;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.text-wave span {
+  display: inline;
+}
+
+.wave-word {
+  display: inline-flex;
+  flex-wrap: nowrap;
+}
+
+.wave-space {
+  display: inline-block;
+  width: 0.6ch;
+}
+
+.wave-char {
+  display: inline-block;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+  will-change: transform, opacity;
+  transform-origin: 50% 60%;
+}
+
+.wave-char--space {
+  display: inline-block;
+  width: 0.6ch;
+}
+
