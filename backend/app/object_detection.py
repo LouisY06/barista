@@ -14,6 +14,7 @@ import numpy as np
 from typing import List, Dict, Optional, Tuple
 import os
 from pathlib import Path
+import threading
 
 
 class ObjectDetector:
@@ -220,11 +221,12 @@ class ObjectDetector:
 
 # Global detector instance
 _detector: Optional[ObjectDetector] = None
+_detector_lock = threading.Lock()
 
 
 def get_detector(model_path: Optional[str] = None, confidence: float = 0.5) -> ObjectDetector:
     """
-    Get or create the global detector instance.
+    Get or create the global detector instance (thread-safe).
     
     Args:
         model_path: Optional path to custom model
@@ -235,8 +237,20 @@ def get_detector(model_path: Optional[str] = None, confidence: float = 0.5) -> O
     """
     global _detector
     
+    # Thread-safe singleton pattern
     if _detector is None:
-        _detector = ObjectDetector(model_path=model_path, confidence_threshold=confidence)
+        with _detector_lock:
+            # Double-check pattern
+            if _detector is None:
+                _detector = ObjectDetector(model_path=model_path, confidence_threshold=confidence)
+            else:
+                # Update confidence if different
+                if _detector.confidence_threshold != confidence:
+                    _detector.confidence_threshold = confidence
+    else:
+        # Update confidence threshold if different
+        if _detector.confidence_threshold != confidence:
+            _detector.confidence_threshold = confidence
     
     return _detector
 

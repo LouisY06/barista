@@ -10,16 +10,30 @@ import serial
 import serial.tools.list_ports
 import threading
 import time
-from typing import Optional
+from typing import Optional, Tuple
 import cv2
 import numpy as np
 from werkzeug.utils import secure_filename
 import os
 import base64
-from app.object_detection import get_detector, detect_from_array, detect_from_file
+import binascii
+import logging
+from logging.handlers import RotatingFileHandler
+from .object_detection import get_detector, detect_from_array, detect_from_file
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend communication
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        RotatingFileHandler('backend.log', maxBytes=10*1024*1024, backupCount=5),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Serial connection to Arduino
 serial_connection: Optional[serial.Serial] = None
@@ -56,12 +70,13 @@ def connect_to_arduino(port: Optional[str] = None) -> bool:
         port = find_arduino_port()
     
     if port is None:
-        print("Error: Could not find Arduino port")
+        logger.error("Could not find Arduino port")
         return False
     
     try:
         with serial_lock:
             if serial_connection and serial_connection.is_open:
+                logger.info("Closing existing serial connection")
                 serial_connection.close()
             
             serial_connection = serial.Serial(
@@ -69,7 +84,7 @@ def connect_to_arduino(port: Optional[str] = None) -> bool:
                 baudrate=SERIAL_BAUD_RATE,
                 timeout=SERIAL_TIMEOUT
             )
-            print(f"Connected to Arduino on {port}")
+            logger.info(f"Connected to Arduino on {port}")
             
             # Wait for Arduino to initialize
             time.sleep(2)
@@ -77,11 +92,11 @@ def connect_to_arduino(port: Optional[str] = None) -> bool:
             # Read initial "READY" message
             if serial_connection.in_waiting:
                 response = serial_connection.readline().decode('utf-8').strip()
-                print(f"Arduino: {response}")
+                logger.info(f"Arduino: {response}")
             
             return True
     except Exception as e:
-        print(f"Error connecting to Arduino: {e}")
+        logger.error(f"Error connecting to Arduino: {e}", exc_info=True)
         return False
 
 
@@ -97,7 +112,7 @@ def send_to_arduino(command: str) -> bool:
             serial_connection.write(f"{command}\n".encode('utf-8'))
             return True
     except Exception as e:
-        print(f"Error sending to Arduino: {e}")
+        logger.error(f"Error sending to Arduino: {e}", exc_info=True)
         return False
 
 
@@ -114,7 +129,7 @@ def read_from_arduino() -> Optional[str]:
                 response = serial_connection.readline().decode('utf-8').strip()
                 return response
     except Exception as e:
-        print(f"Error reading from Arduino: {e}")
+        logger.error(f"Error reading from Arduino: {e}", exc_info=True)
     
     return None
 
@@ -236,6 +251,90 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def parse_image_from_request(request) -> Tuple[Optional[np.ndarray], Optional[str]]:
+    """
+    Parse image from request (either multipart form or JSON base64).
+    
+    Returns:
+        Tuple of (image_array, error_message)
+        If successful: (image, None)
+        If error: (None, error_message)
+    """
+    image = None
+    error = None
+    
+    # Check if image is uploaded as file
+    if 'image' in request.files:
+        file = request.files['image']
+        if file and allowed_file(file.filename):
+            # Check file size
+            file.seek(0, os.SEEK_END)
+            file_size = file.tell()
+            file.seek(0)
+            
+            if file_size > MAX_IMAGE_SIZE:
+                return None, f'Image file too large. Maximum size: {MAX_IMAGE_SIZE / (1024*1024):.1f}MB'
+            
+            if file_size == 0:
+                return None, 'Empty image file'
+            
+            try:
+                file_bytes = file.read()
+                if len(file_bytes) > MAX_IMAGE_SIZE:
+                    return None, f'Image file too large. Maximum size: {MAX_IMAGE_SIZE / (1024*1024):.1f}MB'
+                
+                nparr = np.frombuffer(file_bytes, np.uint8)
+                image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                
+                if image is None:
+                    return None, 'Could not decode image file. Invalid image format.'
+            except Exception as e:
+                return None, f'Error reading image file: {str(e)}'
+    
+    # Check if image is sent as base64
+    elif request.is_json and 'image' in request.json:
+        try:
+            image_data = request.json['image']
+            if not image_data:
+                return None, 'Empty image data'
+            
+            # Remove data URL prefix if present
+            if ',' in image_data:
+                image_data = image_data.split(',')[1]
+            
+            # Check base64 size (rough estimate: base64 is ~33% larger than binary)
+            if len(image_data) > (MAX_IMAGE_SIZE * 4 / 3):
+                return None, f'Image data too large. Maximum size: {MAX_IMAGE_SIZE / (1024*1024):.1f}MB'
+            
+            image_bytes = base64.b64decode(image_data)
+            if len(image_bytes) > MAX_IMAGE_SIZE:
+                return None, f'Image data too large. Maximum size: {MAX_IMAGE_SIZE / (1024*1024):.1f}MB'
+            
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            
+            if image is None:
+                return None, 'Could not decode base64 image. Invalid image format.'
+        except binascii.Error:
+            return None, 'Invalid base64 image data'
+        except Exception as e:
+            return None, f'Error decoding base64 image: {str(e)}'
+    
+    if image is None:
+        return None, 'No valid image provided. Send as multipart file or JSON base64.'
+    
+    return image, None
+
+
+def validate_confidence(confidence: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
+    """Validate and clamp confidence value."""
+    try:
+        conf = float(confidence)
+        return max(min_val, min(max_val, conf))
+    except (ValueError, TypeError):
+        return 0.5  # Default value
+
+
 @app.route('/api/vision/detect', methods=['POST'])
 def detect_objects():
     """
@@ -250,35 +349,16 @@ def detect_objects():
     - annotate: Return annotated image (true/false, default: false)
     """
     try:
-        confidence = float(request.args.get('confidence', 0.5))
+        confidence = validate_confidence(request.args.get('confidence', 0.5))
         annotate = request.args.get('annotate', 'false').lower() == 'true'
+        
+        # Parse image from request
+        image, error = parse_image_from_request(request)
+        if error:
+            return jsonify({'error': error}), 400
         
         # Initialize detector with custom confidence
         detector = get_detector(confidence=confidence)
-        
-        image = None
-        
-        # Check if image is uploaded as file
-        if 'image' in request.files:
-            file = request.files['image']
-            if file and allowed_file(file.filename):
-                # Read image from file
-                file_bytes = file.read()
-                nparr = np.frombuffer(file_bytes, np.uint8)
-                image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        # Check if image is sent as base64
-        elif request.is_json and 'image' in request.json:
-            image_data = request.json['image']
-            # Remove data URL prefix if present
-            if ',' in image_data:
-                image_data = image_data.split(',')[1]
-            image_bytes = base64.b64decode(image_data)
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        if image is None:
-            return jsonify({'error': 'No valid image provided'}), 400
         
         # Detect objects
         detections = detector.detect_objects(image)
@@ -299,6 +379,7 @@ def detect_objects():
         return jsonify(response)
         
     except Exception as e:
+        logger.error(f"Error in detect_objects: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -310,29 +391,15 @@ def detect_cups():
     Same parameters as /api/vision/detect but filters for cup-related objects.
     """
     try:
-        confidence = float(request.args.get('confidence', 0.5))
+        confidence = validate_confidence(request.args.get('confidence', 0.5))
         annotate = request.args.get('annotate', 'false').lower() == 'true'
         
+        # Parse image from request
+        image, error = parse_image_from_request(request)
+        if error:
+            return jsonify({'error': error}), 400
+        
         detector = get_detector(confidence=confidence)
-        
-        image = None
-        
-        if 'image' in request.files:
-            file = request.files['image']
-            if file and allowed_file(file.filename):
-                file_bytes = file.read()
-                nparr = np.frombuffer(file_bytes, np.uint8)
-                image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        elif request.is_json and 'image' in request.json:
-            image_data = request.json['image']
-            if ',' in image_data:
-                image_data = image_data.split(',')[1]
-            image_bytes = base64.b64decode(image_data)
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        if image is None:
-            return jsonify({'error': 'No valid image provided'}), 400
         
         # Detect cups specifically
         cup_detections = detector.detect_cups(image)
@@ -351,6 +418,7 @@ def detect_cups():
         return jsonify(response)
         
     except Exception as e:
+        logger.error(f"Error in detect_cups: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -387,32 +455,15 @@ def robot_detect_objects():
     """
     try:
         object_type = request.args.get('object_type', 'cup').lower()
-        confidence = float(request.args.get('confidence', 0.5))
+        confidence = validate_confidence(request.args.get('confidence', 0.5))
         return_coords = request.args.get('return_coordinates', 'true').lower() == 'true'
         
+        # Parse image from request
+        image, error = parse_image_from_request(request)
+        if error:
+            return jsonify({'error': error}), 400
+        
         detector = get_detector(confidence=confidence)
-        
-        image = None
-        
-        # Check if image is uploaded as file
-        if 'image' in request.files:
-            file = request.files['image']
-            if file and allowed_file(file.filename):
-                file_bytes = file.read()
-                nparr = np.frombuffer(file_bytes, np.uint8)
-                image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        # Check if image is sent as base64
-        elif request.is_json and 'image' in request.json:
-            image_data = request.json['image']
-            if ',' in image_data:
-                image_data = image_data.split(',')[1]
-            image_bytes = base64.b64decode(image_data)
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        if image is None:
-            return jsonify({'error': 'No valid image provided'}), 400
         
         # Detect objects based on requested type
         if object_type == 'cup':
@@ -450,6 +501,7 @@ def robot_detect_objects():
         return jsonify(response)
         
     except Exception as e:
+        logger.error(f"Error in robot_detect_objects: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -462,27 +514,14 @@ def robot_find_cup():
     This is optimized for robot control - returns simple coordinates the robot can use.
     """
     try:
-        confidence = float(request.args.get('confidence', 0.5))
+        confidence = validate_confidence(request.args.get('confidence', 0.5))
+        
+        # Parse image from request
+        image, error = parse_image_from_request(request)
+        if error:
+            return jsonify({'error': error}), 400
+        
         detector = get_detector(confidence=confidence)
-        
-        image = None
-        
-        if 'image' in request.files:
-            file = request.files['image']
-            if file and allowed_file(file.filename):
-                file_bytes = file.read()
-                nparr = np.frombuffer(file_bytes, np.uint8)
-                image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        elif request.is_json and 'image' in request.json:
-            image_data = request.json['image']
-            if ',' in image_data:
-                image_data = image_data.split(',')[1]
-            image_bytes = base64.b64decode(image_data)
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        if image is None:
-            return jsonify({'error': 'No valid image provided'}), 400
         
         # Find cups
         cup_detections = detector.detect_cups(image)
@@ -512,24 +551,26 @@ def robot_find_cup():
         })
         
     except Exception as e:
+        logger.error(f"Error in robot_find_cup: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
     # Initialize object detection model
-    print("Initializing YOLOv11 object detection model...")
+    logger.info("Initializing YOLOv11 object detection model...")
     try:
         detector = get_detector()
-        print("YOLOv11 model loaded successfully")
+        logger.info("YOLOv11 model loaded successfully")
     except Exception as e:
-        print(f"Warning: Could not load YOLOv11 model: {e}")
-        print("Object detection endpoints will not be available")
+        logger.warning(f"Could not load YOLOv11 model: {e}")
+        logger.warning("Object detection endpoints will not be available")
     
     # Try to connect to Arduino on startup
-    print("Attempting to connect to Arduino...")
+    logger.info("Attempting to connect to Arduino...")
     connect_to_arduino()
     
     # Start Flask server
     # Using port 5001 because 5000 is often used by macOS AirPlay Receiver
+    logger.info("Starting Flask server on port 5001...")
     app.run(debug=True, host='0.0.0.0', port=5001)
 
