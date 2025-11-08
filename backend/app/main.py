@@ -4,7 +4,7 @@ Barista Robot Backend Server
 Handles order processing and communication with the robot arm via Serial USB.
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory, redirect
 from flask_cors import CORS
 import serial
 import serial.tools.list_ports
@@ -21,7 +21,14 @@ import logging
 from logging.handlers import RotatingFileHandler
 from .object_detection import get_detector, detect_from_array, detect_from_file
 
+from .vision.calibration_service import bp_calib
+from .vision.sift_service import bp_sift
+from .vision.aruco_service import bp_aruco
+
 app = Flask(__name__)
+app.register_blueprint(bp_calib)
+app.register_blueprint(bp_sift)
+app.register_blueprint(bp_aruco)
 CORS(app)  # Enable CORS for frontend communication
 
 # Configure logging
