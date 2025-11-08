@@ -34,3 +34,11 @@ htmlcov/
 # Logs
 *.log
 
+# Uploads
+uploads/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+

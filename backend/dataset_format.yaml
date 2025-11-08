@@ -1,0 +1,23 @@
+# YOLOv11 Dataset Format Example
+# 
+# This is the format your dataset YAML file should follow.
+# Replace paths with your actual dataset paths.
+
+path: /path/to/your/dataset  # Root directory of dataset
+train: images/train  # Relative to 'path' - training images
+val: images/val      # Relative to 'path' - validation images
+test: images/test     # Optional - test images
+
+# Class names (customize for your items)
+names:
+  0: espresso_cup
+  1: latte_cup
+  2: cappuccino_cup
+  3: milk_bottle
+  4: espresso_machine
+  5: coffee_bean_container
+  # Add more classes as needed
+
+# Number of classes
+nc: 6
+
