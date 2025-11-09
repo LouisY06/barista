@@ -11,6 +11,7 @@ import serial.tools.list_ports
 import threading
 import time
 from typing import Optional, Tuple
+import uuid
 import cv2
 import numpy as np
 from werkzeug.utils import secure_filename
@@ -24,7 +25,15 @@ from .object_detection import get_detector, detect_from_array, detect_from_file
 from .vision.calibration_service import bp_calib
 from .vision.sift_service import bp_sift
 from .vision.aruco_service import bp_aruco
-from .vision.monocular_depth_service import bp_mono_depth
+from .storage import (
+    init_db,
+    save_order,
+    save_receipt,
+    get_orders,
+    get_order,
+    get_receipts,
+    update_order,
+)
 
 app = Flask(__name__)
 app.register_blueprint(bp_calib)
@@ -32,6 +41,9 @@ app.register_blueprint(bp_sift)
 app.register_blueprint(bp_aruco)
 app.register_blueprint(bp_mono_depth)
 CORS(app)  # Enable CORS for frontend communication
+
+# Ensure persistence layer is ready
+init_db()
 
 # Configure logging
 logging.basicConfig(
@@ -194,6 +206,21 @@ def create_order():
             'arduino_response': response,
             'note': 'Robot will use CV to detect objects before executing order'
         }
+
+        # Persist a minimal record so we track hardware-triggered orders too
+        try:
+            save_order({
+                'order_id': str(order_response['id']),
+                'customer_id': data.get('customer_id'),
+                'customer_name': data.get('customer_name'),
+                'customer_email': data.get('customer_email'),
+                'status': 'processing',
+                'total': data.get('total'),
+                'items': [data],
+                'metadata': {'source': 'hardware-order'},
+            })
+        except Exception as db_error:
+            logger.warning(f"Failed to persist order {order_response['id']}: {db_error}")
         
         return jsonify(order_response), 201
         
@@ -562,6 +589,166 @@ def robot_find_cup():
     except Exception as e:
         logger.error(f"Error in robot_find_cup: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/orders/archive', methods=['POST'])
+def archive_order():
+    """
+    Persist a detailed order from the frontend experience.
+    This endpoint is meant for the kiosk/web app to send structured order data
+    that future backend developers can build automations on top of.
+    """
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Missing JSON payload'}), 400
+
+        required = ['order_id', 'items']
+        for field in required:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        save_order(data)
+        return jsonify({'status': 'stored'}), 201
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
+    except Exception as e:
+        logger.error(f"Error archiving order: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to archive order'}), 500
+
+
+@app.route('/api/orders/archive', methods=['GET'])
+def list_archived_orders():
+    """
+    Return archived orders. Supports query params:
+        - limit: number of records to return
+    """
+    try:
+        limit = request.args.get('limit', type=int)
+        orders = list(get_orders(limit=limit))
+        return jsonify({'orders': orders})
+    except Exception as e:
+        logger.error(f"Error fetching archived orders: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch orders'}), 500
+
+
+@app.route('/api/orders/archive/<order_id>', methods=['GET'])
+def get_archived_order(order_id):
+    try:
+        order = get_order(order_id)
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+        return jsonify(order)
+    except Exception as e:
+        logger.error(f"Error fetching order {order_id}: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch order'}), 500
+
+
+@app.route('/api/receipts', methods=['POST'])
+def store_receipt():
+    """
+    Persist a Knot receipt or any payment receipt payload.
+    """
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Missing JSON payload'}), 400
+        if 'receipt_id' not in data:
+            return jsonify({'error': 'Missing required field: receipt_id'}), 400
+
+        save_receipt(data)
+        return jsonify({'status': 'stored'}), 201
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
+    except Exception as e:
+        logger.error(f"Error storing receipt: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to store receipt'}), 500
+
+
+@app.route('/api/receipts', methods=['GET'])
+def list_receipts():
+    """
+    Return stored receipts. Supports query params:
+        - limit: number of records to return
+        - order_id: filter receipts for a specific order
+    """
+    try:
+        limit = request.args.get('limit', type=int)
+        order_id = request.args.get('order_id')
+        receipts = list(get_receipts(limit=limit, order_id=order_id))
+        return jsonify({'receipts': receipts})
+    except Exception as e:
+        logger.error(f"Error fetching receipts: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch receipts'}), 500
+
+
+@app.route('/api/pay/knot', methods=['POST'])
+def pay_with_knot():
+    """
+    Simulate a Knot TransactionLink payment for an archived order.
+    """
+    try:
+        data = request.json or {}
+        order_id = data.get('orderId')
+        amount_cents = data.get('amountCents')
+        method = data.get('method')
+
+        if method != 'knot':
+            return jsonify({'error': 'Unsupported payment method'}), 400
+
+        if not order_id or amount_cents is None:
+            return jsonify({'error': 'orderId and amountCents are required'}), 400
+
+        order = get_order(order_id)
+        if order is None:
+            # Create a placeholder order so downstream systems have a record
+            save_order({
+                'order_id': order_id,
+                'status': 'pending-payment',
+                'total': amount_cents / 100.0,
+                'currency': 'USD',
+                'items': data.get('items', []),
+                'metadata': {'source': 'knot-pay-endpoint'},
+            })
+            order = get_order(order_id)
+
+        tx_id = f"txn_{uuid.uuid4().hex[:16]}"
+
+        # Simulate that the payment was initiated but awaiting settlement
+        payment_status = 'PENDING'
+        loyalty_delta = 0
+
+        update_order(
+            order_id,
+            status='pending',
+            total=amount_cents / 100.0,
+            currency='USD',
+            knot_tx_id=tx_id,
+            payment_status=payment_status,
+            loyalty_delta=loyalty_delta,
+            paid=False,
+            metadata_updates={
+                'knot_payment': {
+                    'tx_id': tx_id,
+                    'amount_cents': amount_cents,
+                    'captured_at': time.time(),
+                }
+            },
+        )
+
+        response = {
+            'ok': True,
+            'status': payment_status,
+            'txId': tx_id,
+            'loyaltyDelta': loyalty_delta,
+            'orderId': order_id,
+        }
+        return jsonify(response), 200
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 404
+    except Exception as e:
+        logger.error(f"Error processing Knot payment: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to process payment'}), 500
 
 
 if __name__ == '__main__':
