@@ -12,3 +12,17 @@ Thumbs.db
 # Logs
 *.log
 
+# Node and Vite build artifacts
+frontend/node_modules/
+frontend/package-lock.json
+frontend/public/drinks/
+frontend/build/
+
+# Python build artifacts
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Logs
+*.log
+
