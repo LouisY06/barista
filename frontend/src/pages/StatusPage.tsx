@@ -26,7 +26,7 @@ export function StatusPage({ latestReceipt, loyaltyBalance, receipts }: StatusPa
           )}
         </div>
         <div className="status-balance">
-          <span className="label">Loyalty Sparks</span>
+          <span className="label">Loyalty Points</span>
           <strong>{loyaltyBalance}</strong>
           <span className="caption">+1 credited per Knot settlement</span>
         </div>

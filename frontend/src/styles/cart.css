@@ -1,0 +1,220 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.cart-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 12, 16, 0.5);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: clamp(16px, 6vw, 48px);
+}
+
+.cart-modal {
+  width: min(540px, 100%);
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 28px;
+  box-shadow: 0 30px 80px rgba(16, 24, 40, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: clamp(24px, 4vw, 36px);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #14202b;
+}
+
+.app-shell.dark .cart-modal {
+  background: rgba(10, 14, 20, 0.92);
+  color: #f5f6f8;
+  box-shadow: 0 30px 90px rgba(4, 8, 14, 0.6);
+}
+
+.cart-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.cart-modal__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.7rem;
+  color: rgba(20, 32, 43, 0.6);
+}
+
+.app-shell.dark .cart-modal__eyebrow {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.cart-modal__header h2 {
+  margin: 4px 0 0;
+  font-size: 1.6rem;
+}
+
+.cart-modal__close {
+  border: none;
+  background: rgba(20, 32, 43, 0.08);
+  color: inherit;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.app-shell.dark .cart-modal__close {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cart-modal__empty {
+  padding: 48px 0;
+  text-align: center;
+  color: rgba(20, 32, 43, 0.65);
+}
+
+.app-shell.dark .cart-modal__empty {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.cart-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cart-modal__list {
+  display: grid;
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.cart-modal__list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(20, 32, 43, 0.05);
+}
+
+.app-shell.dark .cart-modal__list li {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.cart-modal__list strong {
+  font-size: 1rem;
+}
+
+.cart-modal__list span {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(20, 32, 43, 0.6);
+}
+
+.app-shell.dark .cart-modal__list span {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.cart-modal__notes {
+  font-style: italic;
+}
+
+.cart-modal__item-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.cart-modal__item-meta button {
+  border: none;
+  background: none;
+  color: rgba(214, 76, 76, 0.9);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.cart-modal__summary {
+  display: grid;
+  gap: 10px;
+  font-size: 0.95rem;
+}
+
+.cart-modal__summary div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cart-modal__total strong {
+  font-size: 1.2rem;
+}
+
+.cart-modal__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.cart-modal__secondary,
+.cart-modal__primary {
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+}
+
+.cart-modal__secondary {
+  background: rgba(20, 32, 43, 0.08);
+  color: inherit;
+}
+
+.app-shell.dark .cart-modal__secondary {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.cart-modal__primary {
+  background: linear-gradient(135deg, #a4d9b9 0%, #79c2e4 100%);
+  color: #0f161f;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cart-modal__primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.cart-modal__primary:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(121, 194, 228, 0.3);
+}
+
+@media (max-width: 640px) {
+  .cart-modal {
+    padding: 20px;
+  }
+
+  .cart-modal__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cart-modal__secondary,
+  .cart-modal__primary {
+    width: 100%;
+  }
+}
+
+

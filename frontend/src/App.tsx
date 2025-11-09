@@ -104,6 +104,10 @@ function AppShell() {
     setPaymentState('idle');
   };
 
+  const handleRemoveCartItem = (id: string) => {
+    setCartItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
   const handleOpenCart = () => setCartOpen(true);
   const handleCloseCart = () => setCartOpen(false);
   const handleCheckout = () => {
@@ -262,7 +266,14 @@ function AppShell() {
         </Routes>
       </main>
 
-      {cartOpen && <CartModal items={cartItems} onClose={handleCloseCart} onCheckout={handleCheckout} />}
+      {cartOpen && (
+        <CartModal
+          items={cartItems}
+          onClose={handleCloseCart}
+          onCheckout={handleCheckout}
+          onRemoveItem={handleRemoveCartItem}
+        />
+      )}
       {paymentOpen && (
         <KnotPaymentModal
           items={paymentItems}

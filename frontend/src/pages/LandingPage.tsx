@@ -54,8 +54,8 @@ export function LandingPage() {
           <p>Swap effortlessly between whole, skim, oat, or almond—each optimized for perfect emulsification.</p>
         </div>
         <div>
-          <h2>Rewards That Spark</h2>
-          <p>Earn sparks every visit and redeem for matcha upgrades, complimentary pours, and seasonal releases.</p>
+          <h2>Rewards That Earn Points</h2>
+          <p>Earn points every visit and redeem for matcha upgrades, complimentary pours, and seasonal releases.</p>
         </div>
       </section>
     </div>

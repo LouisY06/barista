@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { StackedMatchaCards } from '../components/StackedMatchaCards';
+import type { CartLineItem, TemperaturePreference } from '../types';
 import '../styles/order.css';
 
 const MILK_OPTIONS = [
@@ -11,15 +12,41 @@ const MILK_OPTIONS = [
 
 const LEVELS = [0.2, 0.4, 0.6, 0.8, 1];
 
-export function OrderPage() {
+type OrderPageProps = {
+  cartCount: number;
+  onAddToCart: (item: CartLineItem) => void;
+  onOpenCart: () => void;
+};
+
+const generateItemId = () =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `item_${Math.random().toString(36).slice(2, 10)}`;
+
+export function OrderPage({ cartCount, onAddToCart, onOpenCart }: OrderPageProps) {
   const [selectedMilk, setSelectedMilk] = useState(MILK_OPTIONS[0]);
   const [level, setLevel] = useState<number>(LEVELS[3]);
-  const [temperature, setTemperature] = useState<'Hot' | 'Cold'>('Hot');
+  const [temperature, setTemperature] = useState<TemperaturePreference>('Hot');
   const [favorite, setFavorite] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
 
   const priceLabel = useMemo(() => `$${selectedMilk.price.toFixed(2)}`, [selectedMilk]);
   const showcaseClass = `matcha-showcase ${temperature === 'Hot' ? 'hot-mode' : 'cold-mode'}`;
+  const intensityPercent = useMemo(() => Math.round(level * 100), [level]);
+
+  const handleAddItem = () => {
+    const cartItem: CartLineItem = {
+      id: generateItemId(),
+      drinkId: `matcha-${selectedMilk.id}`,
+      name: `${temperature} Matcha Latte`,
+      milk: selectedMilk.name,
+      temperature,
+      intensity: intensityPercent,
+      price: selectedMilk.price,
+      notes: favorite ? 'Favorited selection' : undefined,
+    };
+
+    onAddToCart(cartItem);
+  };
 
   return (
     <div className={showcaseClass}>
@@ -83,15 +110,11 @@ export function OrderPage() {
                 />
               ))}
             </div>
-            <p className="level-text">Intensity {Math.round(level * 100)}%</p>
+            <p className="level-text">Intensity {intensityPercent}%</p>
           </div>
 
           <footer className="product-actions">
-            <button
-              type="button"
-              className="primary-cta"
-              onClick={() => setCartCount((prev) => prev + 1)}
-            >
+            <button type="button" className="primary-cta" onClick={handleAddItem}>
               Add Item
             </button>
             <button
@@ -107,9 +130,21 @@ export function OrderPage() {
       </section>
 
       {cartCount > 0 && (
-        <button type="button" className="floating-cart" aria-label={`Open cart, ${cartCount} items`}>
+        <button
+          type="button"
+          className="floating-cart"
+          aria-label={`Open cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
+          onClick={onOpenCart}
+        >
           <span className="cart-icon-mini" aria-hidden>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M7 7h10l1 12H6L7 7Z" />
               <path d="M9 7a3 3 0 0 1 6 0" />
             </svg>
@@ -121,4 +156,5 @@ export function OrderPage() {
     </div>
   );
 }
+
 

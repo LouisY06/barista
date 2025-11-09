@@ -164,5 +164,11 @@
   .profile-root {
     padding: clamp(20px, 6vw, 48px);
   }
-\n  .profile-top {\n    flex-direction: column;\n    align-items: flex-start;\n  }\n}\n*** End Patch
+
+  .profile-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 
