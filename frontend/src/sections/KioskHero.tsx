@@ -39,7 +39,7 @@ export function KioskHero() {
           <div className="relative rounded-3xl border border-white/10 bg-white/10 p-6 sm:p-8 backdrop-blur-xl shadow-[0_15px_50px_rgba(0,0,0,0.35)]">
             <div className="grid gap-6 text-left sm:grid-cols-[1fr_auto] sm:items-center">
               <div className="space-y-2">
-                <h3 className="text-base font-medium text-white/90">Launch the MatchaBot Kiosk</h3>
+              <h3 className="text-base font-medium text-white/90">Launch the CAF-E Kiosk</h3>
                 <p className="text-sm leading-relaxed text-neutral-200/85">
                   Customize your drink, adjust sweetness, and add premium toppings. Our online ordering mirrors the
                   in-store kiosk so your drink is ready when you arrive.

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { StackedRewardCard } from '../components/StackedRewardCard';
 import '../styles/rewards.css';
 
-const BALANCE = 742;
 const GOAL = 1300;
 
 const REWARDS = [
@@ -50,8 +49,12 @@ const TIERS = [
   { id: 'ceremonial', label: 'Ceremonial Member', range: '701+ pts', description: 'Master of the matcha ritual.' },
 ];
 
-export function RewardsPage() {
-  const progress = Math.min(BALANCE / GOAL, 1);
+type RewardsPageProps = {
+  loyaltyBalance: number;
+};
+
+export function RewardsPage({ loyaltyBalance }: RewardsPageProps) {
+  const progress = Math.min(loyaltyBalance / GOAL, 1);
   const [claimedRewards, setClaimedRewards] = useState<string[]>([]);
 
   const handleClaim = (id: string) => {
@@ -62,7 +65,7 @@ export function RewardsPage() {
     <div className="rewards-page">
       <header className="rewards-hero">
         <div className="hero-text">
-          <p className="hero-kicker">MatchaBot Rewards</p>
+          <p className="hero-kicker">CAF-E Rewards</p>
           <h1>Every cup earns a moment.</h1>
           <p>
             Matcha-based rewards crafted for calm, ritual, and precision. Earn points with every pour — redeem them for
@@ -72,13 +75,13 @@ export function RewardsPage() {
         <div className="balance-panel">
           <div className="balance-header">
             <span className="balance-label">Available Balance</span>
-            <strong className="balance-value">{BALANCE} Points</strong>
+            <strong className="balance-value">{loyaltyBalance} Points</strong>
           </div>
           <div className="progress-track" aria-hidden>
             <div className="progress-fill" style={{ width: `${progress * 100}%` }} />
           </div>
           <span className="progress-caption">
-            {BALANCE} / {GOAL} toward Ceremonial Limited Drink
+            {loyaltyBalance} / {GOAL} toward Ceremonial Limited Drink
           </span>
         </div>
       </header>
