@@ -1,84 +1,71 @@
-# Barista Robot Arm Firmware
+# Arduino Firmware Upload
 
-Arduino C++ firmware for controlling the robot arm that makes drinks based on orders received from the backend server.
+## Quick Start
 
-## Hardware Requirements
+### Option 1: Using the Upload Script (Recommended)
 
-- Arduino board (Uno, Mega, or compatible)
-- Robot arm components (servos, motors, sensors as needed)
-- USB cable for serial communication
-
-## Setup
-
-1. Install [Arduino IDE](https://www.arduino.cc/en/software) or use [PlatformIO](https://platformio.org/)
-
-2. Open `src/main.ino` in Arduino IDE
-
-3. Install any required libraries (add as needed for your specific hardware)
-
-4. Select your Arduino board and port in the IDE
-
-5. Upload the sketch to your Arduino
-
-## Communication Protocol
-
-The firmware communicates with the backend via Serial USB at 9600 baud.
-
-### Commands Received from Backend
-
-- `ORDER:<drink_type>:<size>:<options>` - Execute a drink order
-  - Example: `ORDER:ESPRESSO:MEDIUM:NONE`
-  
-- `STATUS` - Request current robot status
-  - Response: `STATUS:<state>` where state is IDLE, PROCESSING_ORDER, MAKING_DRINK, COMPLETE, or ERROR
-
-- `RESET` - Reset robot arm to idle state
-  - Response: `RESET_COMPLETE`
-
-### Messages Sent to Backend
-
-- `READY` - Sent on startup when robot is ready
-- `STATUS:<state>` - Current robot state
-- `ORDER_COMPLETE` - Order has been completed
-- `STATUS:IDLE` - Robot returned to idle state
-
-## Customization
-
-You'll need to implement the following functions based on your specific robot arm hardware:
-
-- `initializeRobotArm()` - Initialize servos, motors, sensors
-- `makeDrink()` - Implement the actual drink-making sequence
-- `updateRobotArm()` - Continuous monitoring and control logic
-- `resetRobotArm()` - Move robot to home position
-
-## Building
-
-### Using Arduino IDE
-
-1. Open `src/main.ino`
-2. Select Tools > Board > [Your Board]
-3. Select Tools > Port > [Your Port]
-4. Click Upload
-
-### Using PlatformIO
+From Cursor terminal, run:
 
 ```bash
 cd firmware
-pio run --target upload
+./upload.sh
 ```
 
-## Testing
+The script will:
+- Install `arduino-cli` if needed (via Homebrew)
+- Detect your Arduino board
+- Install required libraries (AccelStepper)
+- Compile and upload the code
 
-1. Connect Arduino via USB
-2. Open Serial Monitor at 9600 baud
-3. Send test commands:
-   - `STATUS` - Should return current status
-   - `ORDER:ESPRESSO:SMALL:NONE` - Should process order
-   - `RESET` - Should reset robot
+### Option 2: Manual Upload
+
+1. **Install arduino-cli:**
+   ```bash
+   brew install arduino-cli
+   ```
+
+2. **Initialize and update:**
+   ```bash
+   arduino-cli config init
+   arduino-cli core update-index
+   ```
+
+3. **List available boards:**
+   ```bash
+   arduino-cli board list
+   ```
+
+4. **Install board core (e.g., for Uno):**
+   ```bash
+   arduino-cli core install arduino:avr
+   ```
+
+5. **Install AccelStepper library:**
+   ```bash
+   arduino-cli lib install AccelStepper
+   ```
+
+6. **Compile:**
+   ```bash
+   arduino-cli compile --fqbn arduino:avr:uno src/
+   ```
+
+7. **Upload:**
+   ```bash
+   arduino-cli upload -p /dev/cu.usbmodem* --fqbn arduino:avr:uno src/
+   ```
+   (Replace `/dev/cu.usbmodem*` with your actual port from `arduino-cli board list`)
+
+## Current Code
+
+The current `main.ino` tests a single stepper motor:
+- STEP pin: 2
+- DIR pin: 3
+- Moves 80 steps forward, then back to 0, continuously
 
 ## Troubleshooting
 
-- **No serial communication**: Check USB cable and port selection
-- **Commands not recognized**: Ensure commands end with newline character
-- **Robot not responding**: Verify hardware connections and power supply
-
+- **Board not detected:** Make sure Arduino is connected via USB and drivers are installed
+- **Permission denied:** On macOS, you may need to allow the USB device in System Preferences
+- **Library not found:** Run `arduino-cli lib install AccelStepper`
+- **Wrong board:** Update the FQBN in the script or use manual commands with your board type
