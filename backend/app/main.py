@@ -24,11 +24,13 @@ from .object_detection import get_detector, detect_from_array, detect_from_file
 from .vision.calibration_service import bp_calib
 from .vision.sift_service import bp_sift
 from .vision.aruco_service import bp_aruco
+from .vision.monocular_depth_service import bp_mono_depth
 
 app = Flask(__name__)
 app.register_blueprint(bp_calib)
 app.register_blueprint(bp_sift)
 app.register_blueprint(bp_aruco)
+app.register_blueprint(bp_mono_depth)
 CORS(app)  # Enable CORS for frontend communication
 
 # Configure logging
