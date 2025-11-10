@@ -9,6 +9,16 @@
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+.profile-root.orders-view {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-top: clamp(32px, 6vw, 72px);
+}
+
+.profile-root.orders-view > .orders-card {
+  align-self: stretch;
+}
+
 .profile-hero {
   background: var(--card-surface);
   border-radius: 28px;
@@ -49,29 +59,40 @@
   color: var(--text-muted);
 }
 
-.profile-actions {
-  margin-top: 16px;
-}
-
-.profile-qr {
-  border: none;
-  background: rgba(0, 0, 0, 0.82);
-  color: #fff;
-  width: 54px;
-  height: 54px;
+.profile-status {
+  position: relative;
+  z-index: 1;
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
   border-radius: 18px;
-  display: grid;
-  grid-template-columns: repeat(2, 16px);
-  grid-template-rows: repeat(2, 16px);
-  gap: 6px;
-  padding: 8px;
-  cursor: pointer;
-  box-shadow: 0 12px 18px rgba(0, 0, 0, 0.25);
+  background: rgba(0, 139, 65, 0.12);
+  border: 1px solid rgba(0, 139, 65, 0.28);
+  font-size: 0.86rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(0, 70, 32, 0.75);
 }
 
-.profile-qr .qr-dot {
-  background: #fff;
-  border-radius: 4px;
+.profile-status.muted {
+  background: rgba(20, 20, 20, 0.06);
+  border-color: rgba(20, 20, 20, 0.08);
+  color: var(--text-muted);
+}
+
+.app-shell.dark .profile-status {
+  background: rgba(0, 139, 65, 0.22);
+  border-color: rgba(0, 139, 65, 0.38);
+  color: rgba(195, 255, 214, 0.85);
+}
+
+.app-shell.dark .profile-status.muted {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(240, 240, 240, 0.7);
 }
 
 .profile-stats {
@@ -82,18 +103,190 @@
   z-index: 1;
 }
 
+.profile-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .stat-label {
-  text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.18em;
+  text-transform: uppercase;
   color: var(--text-muted);
-  display: block;
-  margin-bottom: 6px;
 }
 
 .stat-value {
   font-size: 1.4rem;
   font-weight: 600;
+}
+
+.stat-meta {
+  font-size: 0.78rem;
+  color: rgba(0, 139, 65, 0.72);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-shell.dark .stat-meta {
+  color: rgba(195, 255, 214, 0.72);
+}
+
+.orders-card {
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.92), rgba(236, 241, 233, 0.9));
+  border-radius: 28px;
+  padding: clamp(28px, 4vw, 40px);
+  box-shadow: 0 32px 52px rgba(16, 24, 40, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  border: 1px solid rgba(16, 24, 40, 0.05);
+  backdrop-filter: blur(18px);
+}
+
+.orders-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.orders-kicker {
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.orders-card h2 {
+  margin-top: 6px;
+  font-size: clamp(1.2rem, 3vw, 1.6rem);
+  letter-spacing: 0.06em;
+}
+
+.orders-meta {
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(0, 139, 65, 0.7);
+  cursor: pointer;
+}
+
+.orders-empty {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.orders-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.orders-card li {
+  background: rgba(249, 250, 248, 0.88);
+  border-radius: 22px;
+  padding: 20px 22px;
+  border: 1px solid rgba(16, 24, 40, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 22px 40px rgba(16, 24, 40, 0.1);
+}
+
+.orders-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.orders-summary strong {
+  display: block;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
+.orders-summary span {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.orders-total {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.orders-summary code {
+  display: inline-block;
+  background: rgba(0, 139, 65, 0.12);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(0, 139, 65, 0.85);
+}
+
+.orders-session {
+  margin: 0;
+  font-size: 0.82rem;
+  color: rgba(20, 20, 20, 0.6);
+}
+
+.orders-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: rgba(20, 20, 20, 0.72);
+}
+
+.orders-items span {
+  background: rgba(0, 139, 65, 0.08);
+  border-radius: 999px;
+  padding: 6px 12px;
+}
+
+.app-shell.dark .orders-card {
+  background: linear-gradient(140deg, rgba(30, 30, 30, 0.94), rgba(12, 12, 12, 0.9));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 32px 60px rgba(0, 0, 0, 0.42);
+}
+
+.app-shell.dark .orders-card li {
+  background: rgba(36, 36, 36, 0.85);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.38);
+}
+
+.app-shell.dark .orders-summary span,
+.app-shell.dark .orders-session {
+  color: rgba(240, 240, 240, 0.62);
+}
+
+.app-shell.dark .orders-items span {
+  background: rgba(0, 139, 65, 0.22);
+  color: rgba(240, 240, 240, 0.85);
+}
+
+.orders-count {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(20, 20, 20, 0.5);
+}
+
+.app-shell.dark .orders-count {
+  color: rgba(240, 240, 240, 0.6);
 }
 
 .profile-menu {
@@ -164,11 +357,5 @@
   .profile-root {
     padding: clamp(20px, 6vw, 48px);
   }
-
-  .profile-top {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
+\n  .profile-top {\n    flex-direction: column;\n    align-items: flex-start;\n  }\n}\n*** End Patch
 

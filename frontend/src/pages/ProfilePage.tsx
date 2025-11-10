@@ -35,7 +35,8 @@ export function ProfilePage({ receipts, loyaltyBalance }: ProfilePageProps) {
         ) : (
           <div className="profile-status muted">
             <span>No Knot payments yet</span>
-            <span>Start an order to earn loyalty points</span>
+            <span aria-hidden="true">•</span>
+            <span>Start an order to earn loyalty sparks</span>
           </div>
         )}
         <div className="profile-stats">
@@ -48,7 +49,7 @@ export function ProfilePage({ receipts, loyaltyBalance }: ProfilePageProps) {
             <span className="stat-value">0</span>
           </div>
           <div>
-            <span className="stat-label">Points</span>
+            <span className="stat-label">Sparks</span>
             <span className="stat-value">{loyaltyBalance}</span>
             <span className="stat-meta">+1 per Knot capture</span>
           </div>
@@ -60,6 +61,10 @@ export function ProfilePage({ receipts, loyaltyBalance }: ProfilePageProps) {
           <div>
             <span className="orders-kicker">Account</span>
             <h2>My Orders</h2>
+            <span className="orders-count">
+              {recentReceipts.length}{' '}
+              {recentReceipts.length === 1 ? 'receipt' : 'receipts'}
+            </span>
           </div>
           <button type="button" className="orders-meta" onClick={() => navigate('/orders')}>
             See all →
@@ -84,8 +89,8 @@ export function ProfilePage({ receipts, loyaltyBalance }: ProfilePageProps) {
                 </div>
                 <p className="orders-session">Session {receipt.sessionId}</p>
                 <div className="orders-items">
-                  {receipt.items.map((item) => (
-                    <span key={item.id}>
+                  {receipt.items.map((item, index) => (
+                    <span key={item.id ?? `${receipt.id}-${index}`}>
                       {item.name} · {item.temperature} · {item.milk}
                     </span>
                   ))}
@@ -128,7 +133,7 @@ export function ProfilePage({ receipts, loyaltyBalance }: ProfilePageProps) {
           <li>
             <button type="button">
               <span>Invite Friends</span>
-              <span className="menu-meta">Earn Points</span>
+              <span className="menu-meta">Earn Sparks</span>
             </button>
           </li>
           <li>

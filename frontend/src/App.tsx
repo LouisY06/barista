@@ -23,6 +23,7 @@ const generateId = (prefix: string) => `${prefix}_${Math.random().toString(36).s
 type Theme = 'light' | 'dark';
 
 const STORAGE_KEY = 'caf-e-theme';
+const RECEIPTS_STORAGE_KEY = 'caf-e-receipts';
 
 function AppShell() {
   const navigate = useNavigate();
@@ -39,6 +40,68 @@ function AppShell() {
   const [receipts, setReceipts] = useState<KnotReceipt[]>([]);
   const [latestReceipt, setLatestReceipt] = useState<KnotReceipt | null>(null);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.localStorage.getItem(RECEIPTS_STORAGE_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed) || parsed.length === 0) return;
+
+      const normalized: KnotReceipt[] = parsed
+        .map((entry: any, receiptIndex: number) => {
+          if (!entry || typeof entry !== 'object') return null;
+          const lineItems = Array.isArray(entry.items ?? entry.line_items)
+            ? (entry.items ?? entry.line_items).map((item: any, itemIndex: number) => ({
+                id: item?.id ?? item?.drinkId ?? generateId(`item_${receiptIndex}_${itemIndex}`),
+                drinkId: item?.drinkId ?? item?.drink_id ?? 'custom',
+                name: item?.name ?? 'Custom Pour',
+                milk: item?.milk ?? 'Whole Milk',
+                temperature: item?.temperature === 'Cold' ? 'Cold' : 'Hot',
+                intensity: Number(item?.intensity ?? 80),
+                price: Number(item?.price ?? 0),
+              }))
+            : [];
+
+          const createdAt = entry.createdAt ?? entry.created_at ?? new Date().toISOString();
+
+          return {
+            id: entry.id ?? entry.receipt_id ?? generateId(`rec_${receiptIndex}`),
+            sessionId: entry.sessionId ?? entry.session_id ?? 'unknown',
+            orderId: entry.orderId ?? entry.order_id,
+            merchant: entry.merchant ?? 'CAF-E Autonomous Bar',
+            subtotal: Number(entry.subtotal ?? entry.total ?? 0),
+            items: lineItems,
+            createdAt,
+            currency: entry.currency ?? 'USD',
+            txId: entry.txId ?? entry.tx_id,
+            paymentStatus: entry.paymentStatus ?? entry.payment_status ?? 'CONFIRMED',
+            loyaltyDelta: entry.loyaltyDelta ?? entry.loyalty_delta ?? 0,
+          } satisfies KnotReceipt;
+        })
+        .filter(Boolean) as KnotReceipt[];
+
+      if (!normalized.length) return;
+      setReceipts((prev) => (prev.length ? prev : normalized));
+      setLatestReceipt((prev) => prev ?? normalized[normalized.length - 1]);
+    } catch (error) {
+      console.warn('Failed to restore receipts from storage', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (!receipts.length) {
+        window.localStorage.removeItem(RECEIPTS_STORAGE_KEY);
+        return;
+      }
+      window.localStorage.setItem(RECEIPTS_STORAGE_KEY, JSON.stringify(receipts));
+    } catch (error) {
+      console.warn('Failed to persist receipts to storage', error);
+    }
+  }, [receipts]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -64,23 +127,38 @@ function AppShell() {
       const payload = await response.json();
       if (!Array.isArray(payload?.receipts)) return;
 
-      const normalized: KnotReceipt[] = payload.receipts.map((entry: any) => ({
-        id: entry.receipt_id ?? entry.id ?? generateId('rec'),
-        sessionId: entry.session_id ?? entry.sessionId ?? 'unknown',
-        orderId: entry.order_id ?? entry.orderId,
-        merchant:
-          entry.raw_payload?.merchant ??
-          entry.metadata?.merchant ??
-          entry.merchant ??
-          'CAF-E Autonomous Bar',
-        subtotal: Number(entry.total ?? entry.subtotal ?? 0),
-        items: entry.line_items ?? entry.items ?? [],
-        createdAt: entry.created_at ?? entry.createdAt ?? new Date().toISOString(),
-        currency: entry.currency ?? entry.raw_payload?.currency ?? 'USD',
-        txId: entry.tx_id ?? entry.raw_payload?.txId ?? entry.raw_payload?.tx_id,
-        paymentStatus: entry.payment_status ?? entry.raw_payload?.paymentStatus ?? 'CONFIRMED',
-        loyaltyDelta: entry.loyalty_delta ?? entry.raw_payload?.loyaltyDelta ?? 0,
-      }));
+      const normalized: KnotReceipt[] = payload.receipts.map((entry: any, receiptIndex: number) => {
+        const rawItems = Array.isArray(entry.line_items ?? entry.items)
+          ? (entry.line_items ?? entry.items)
+          : [];
+        const items: CartLineItem[] = rawItems.map((item: any, itemIndex: number) => ({
+          id: item?.id ?? item?.drinkId ?? generateId(`item_${receiptIndex}_${itemIndex}`),
+          drinkId: item?.drinkId ?? item?.drink_id ?? 'custom',
+          name: item?.name ?? item?.label ?? 'Custom Pour',
+          milk: item?.milk ?? 'Whole Milk',
+          temperature: item?.temperature === 'Cold' ? 'Cold' : 'Hot',
+          intensity: Number(item?.intensity ?? item?.strength ?? 80),
+          price: Number(item?.price ?? item?.amount ?? 0),
+        }));
+
+        return {
+          id: entry.receipt_id ?? entry.id ?? generateId('rec'),
+          sessionId: entry.session_id ?? entry.sessionId ?? 'unknown',
+          orderId: entry.order_id ?? entry.orderId,
+          merchant:
+            entry.raw_payload?.merchant ??
+            entry.metadata?.merchant ??
+            entry.merchant ??
+            'CAF-E Autonomous Bar',
+          subtotal: Number(entry.total ?? entry.subtotal ?? 0),
+          items,
+          createdAt: entry.created_at ?? entry.createdAt ?? new Date().toISOString(),
+          currency: entry.currency ?? entry.raw_payload?.currency ?? 'USD',
+          txId: entry.tx_id ?? entry.raw_payload?.txId ?? entry.raw_payload?.tx_id,
+          paymentStatus: entry.payment_status ?? entry.raw_payload?.paymentStatus ?? 'CONFIRMED',
+          loyaltyDelta: entry.loyalty_delta ?? entry.raw_payload?.loyaltyDelta ?? 0,
+        } satisfies KnotReceipt;
+      });
 
       setReceipts(normalized);
       setLatestReceipt(normalized[normalized.length - 1] ?? null);
@@ -104,12 +182,9 @@ function AppShell() {
     setPaymentState('idle');
   };
 
-  const handleRemoveCartItem = (id: string) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id));
-  };
-
   const handleOpenCart = () => setCartOpen(true);
   const handleCloseCart = () => setCartOpen(false);
+  const handleToggleCart = () => setCartOpen((prev) => !prev);
   const handleCheckout = () => {
     setCartOpen(false);
     navigate('/checkout');
@@ -230,7 +305,7 @@ function AppShell() {
         <span className="brand-mark">CAF-E</span>
         <div className="header-controls">
           <HeaderTabs />
-          <CartButton count={cartCount} onClick={handleOpenCart} />
+          <CartButton count={cartCount} isOpen={cartOpen} onClick={handleToggleCart} />
           <ThemeToggle theme={theme} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
         </div>
       </header>
@@ -238,7 +313,10 @@ function AppShell() {
       <main className="app-main">
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/order" element={<OrderPage cartCount={cartCount} onAddToCart={handleAddToCart} onOpenCart={handleOpenCart} />} />
+          <Route
+            path="/order"
+            element={<OrderPage cartCount={cartCount} onAddToCart={handleAddToCart} onOpenCart={handleOpenCart} />}
+          />
           <Route path="/rewards" element={<RewardsPage loyaltyBalance={loyaltyBalance} />} />
           <Route path="/profile" element={<ProfilePage receipts={receipts} loyaltyBalance={loyaltyBalance} />} />
           <Route path="/status" element={<StatusPage latestReceipt={latestReceipt} loyaltyBalance={loyaltyBalance} receipts={receipts} />} />
@@ -266,14 +344,7 @@ function AppShell() {
         </Routes>
       </main>
 
-      {cartOpen && (
-        <CartModal
-          items={cartItems}
-          onClose={handleCloseCart}
-          onCheckout={handleCheckout}
-          onRemoveItem={handleRemoveCartItem}
-        />
-      )}
+      {cartOpen && <CartModal items={cartItems} onClose={handleCloseCart} onCheckout={handleCheckout} />}
       {paymentOpen && (
         <KnotPaymentModal
           items={paymentItems}
